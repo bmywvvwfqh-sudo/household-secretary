@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '../hooks/useToast';
 import { ShieldCheck, RefreshCw, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ export const BindingPanel: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const toast = useToast();
 
-  const familyId = "family-123"; // MVP 測試固定家庭 ID
+  const familyId = user?.uid || ''; // 以 Google UID 作為家庭 ID
 
   useEffect(() => {
     if (!code) return;
@@ -39,8 +39,15 @@ export const BindingPanel: React.FC = () => {
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5分鐘後
 
     try {
-      if (db) {
-        // 真實 Firebase 寫入
+      if (db && familyId) {
+        // 確保家庭文件存在（第一次使用時自動建立）
+        await setDoc(doc(db, 'families', familyId), {
+          createdBy: user?.uid,
+          createdAt: serverTimestamp(),
+          memberUids: [user?.uid],
+        }, { merge: true });
+
+        // 寫入配對碼
         await setDoc(doc(db, 'bindingCodes', randomCode), {
           familyId,
           createdAt: Date.now(),
