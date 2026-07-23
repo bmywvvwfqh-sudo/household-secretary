@@ -83,16 +83,15 @@ vi.mock('../gemini', () => ({
   })
 }));
 
-// 3. 測試目標
-// 因為 index.ts 在載入時會自動執行 admin.initializeApp()，我們可以在 mock 完 admin 後再 import 測試目標
-import { processLineEvents } from '../index';
-
 describe('家庭秘書 Webhook 整合發包流程測試', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('🟢 模擬 LINE 訊息發送，應順利經歷去重、綁定反查、Gemini 解析與寫入資料庫', async () => {
+    // 3. 測試目標 (使用動態載入防範 ES6 Hoisting 造成的未初始化錯誤)
+    const { processLineEvents } = await import('../index');
+
     // 模擬 Cloud Tasks 發送過來的 Webhook 事件請求
     const mockRequest = {
       headers: {
