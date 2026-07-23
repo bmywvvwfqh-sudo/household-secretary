@@ -33,7 +33,7 @@ const MainApp: React.FC = () => {
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 100px' }}>
         {renderTab()}
       </main>
-      <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
+      <BottomNav currentTab={activeTab} setCurrentTab={(tab) => setActiveTab(tab as TabId)} />
     </div>
   );
 };
