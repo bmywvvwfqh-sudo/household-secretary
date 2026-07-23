@@ -1,0 +1,22 @@
+# Dependency directories
+node_modules/
+/web/node_modules/
+/functions/node_modules/
+
+# Build outputs
+/web/dist/
+/functions/lib/
+
+# Local cache & env
+/functions/npm-cache/
+/functions/.env
+/web/.env
+.env.local
+.env.*.local
+.DS_Store
+
+# Firebase logs
+*-debug.log
+.firebase/
+firestore-debug.log
+ui-debug.log

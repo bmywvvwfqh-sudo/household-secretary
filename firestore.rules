@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 家庭資料：限家庭成員讀寫
+    match /families/{familyId}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberUids;
+    }
+
+    // 待確認佇列：只有已登入使用者可讀（前端顯示用），寫入只靠 Admin SDK
+    match /unconfirmedQueue/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;  // Admin SDK 繞過此規則；前端不可寫入
+    }
+
+    // 配對碼：完全封鎖前端（所有操作由 Admin SDK 執行）
+    match /bindingCodes/{code} {
+      allow read:  if false;
+      allow write: if false;
+    }
+
+    // 冪等紀錄：完全封鎖前端（由 processLineEvents Cloud Function 寫入）
+    match /families/{familyId}/processedEvents/{eventId} {
+      allow read:  if false;
+      allow write: if false;
+    }
+  }
+}
