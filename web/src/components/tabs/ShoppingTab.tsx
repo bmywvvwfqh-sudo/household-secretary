@@ -22,7 +22,7 @@ export const ShoppingTab: React.FC = () => {
   const [newItemQty, setNewItemQty] = useState('1');
   const toast = useToast();
 
-  const familyId = "family-123";
+  const familyId = user?.uid || '';
   const stores = ['好市多', '全聯', '家樂福', '一般採買'];
 
   // Mock 資料，供訪客通道使用
@@ -42,6 +42,7 @@ export const ShoppingTab: React.FC = () => {
     }
 
     // 真實 Firestore 資料同步
+    if (!familyId) return;
     const q = query(collection(db, 'families', familyId, 'shoppingList'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const shoppingData: ShoppingItem[] = [];
@@ -63,7 +64,7 @@ export const ShoppingTab: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [familyId]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();

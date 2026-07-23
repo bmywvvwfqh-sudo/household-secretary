@@ -22,7 +22,7 @@ export const CalendarTab: React.FC = () => {
   const [isSubmittingIcal, setIsSubmittingIcal] = useState(false);
   const toast = useToast();
 
-  const familyId = "family-123";
+  const familyId = user?.uid || '';
 
   // Mock 資料，供訪客通道使用
   const mockEvents: CalendarEvent[] = [
@@ -40,6 +40,7 @@ export const CalendarTab: React.FC = () => {
     }
 
     // 真實 Firestore 資料同步
+    if (!familyId) return;
     const q = query(collection(db, 'families', familyId, 'calendarEvents'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const eventData: CalendarEvent[] = [];
@@ -62,7 +63,7 @@ export const CalendarTab: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [familyId]);
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
