@@ -184,7 +184,7 @@ async function processEventCore(event: LineWebhookEvent): Promise<void> {
 
   if (message.type === 'text') {
     textContent = message.text;
-    const intercepted = await handleLineCommands(familyId, lineUserId, replyToken, textContent);
+    const intercepted = await handleLineCommands(familyId, lineUserId, replyToken || '', textContent);
     if (intercepted) return;
   } else if (message.type === 'audio') {
     // 語音檔下載 (限制大於 10MB 將拒絕)
