@@ -1,0 +1,7 @@
+# Exclude local directories and configuration files
+.gcloudignore
+.git
+.gitignore
+node_modules/
+npm-cache/
+lib/**/*.js.map
