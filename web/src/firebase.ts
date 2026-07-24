@@ -2,9 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+import { getFunctions } from 'firebase/functions';
+
 let auth: any = null;
 let db: any = null;
 let googleProvider: any = null;
+let functions: any = null;
 
 const firebaseConfig = {
   apiKey: "AIzaSyAaKzGUN30fLBKfOsdhgdRewJ64dW2Iyck",
@@ -20,11 +23,12 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   googleProvider = new GoogleAuthProvider();
+  functions = getFunctions(app, 'us-central1');
 } catch (error) {
   console.error("Firebase 初始化失敗，將使用 Mock 模式", error);
 }
 
-export { auth, db, googleProvider };
+export { auth, db, googleProvider, functions };
 
 export const loginWithGoogle = async () => {
   if (!auth) {

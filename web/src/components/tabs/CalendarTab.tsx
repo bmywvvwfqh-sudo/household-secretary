@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
+import { db, functions } from '../../firebase';
 import { collection, query, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useToast } from '../../hooks/useToast';
 import { Plus, Trash2, Globe, Link2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -112,27 +113,45 @@ export const CalendarTab: React.FC = () => {
     }
   };
 
-  const handleSubscribeIcal = (e: React.FormEvent) => {
+  const handleSubscribeIcal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!icalUrl.trim()) return;
 
     setIsSubmittingIcal(true);
-    toast.show('正在嘗試連接外部 iCal 訂閱連結...', 'info');
+    toast.show('正在下載外部 iCal 訂閱連結並同步行程...', 'info');
 
-    setTimeout(() => {
-      // Mock 同步
-      const syncedEvent: CalendarEvent = {
-        id: Math.random().toString(),
-        title: '🔔 [iCal 同步] 家長會面談行程',
-        dateTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T10:00:00',
-        createdBy: 'iCal 外部訂閱',
-        source: 'ical'
-      };
-      setEvents((prev) => [...prev, syncedEvent].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()));
+    try {
+      if (db && functions) {
+        const syncFunc = httpsCallable(functions, 'syncExternalCalendar');
+        const result: any = await syncFunc({ familyId, icalUrl: icalUrl.trim() });
+        
+        if (result.data?.success) {
+          toast.show(`✅ 外部 iCal 同步成功！已自動導入 ${result.data.count} 項新行程。`, 'success');
+          setIcalUrl('');
+        } else {
+          toast.show('同步未成功，請確認日曆網址是否可公開讀取。', 'warning');
+        }
+      } else {
+        // Mock 訪客預覽同步
+        setTimeout(() => {
+          const syncedEvent: CalendarEvent = {
+            id: Math.random().toString(),
+            title: '🔔 [iCal 同步] 家長會面談行程',
+            dateTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T10:00:00',
+            createdBy: 'iCal 外部訂閱',
+            source: 'ical'
+          };
+          setEvents((prev) => [...prev, syncedEvent].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()));
+          setIsSubmittingIcal(false);
+          setIcalUrl('');
+          toast.show('✅ 外部 iCal 訂閱成功！已自動導入新行程。', 'success');
+        }, 2000);
+      }
+    } catch (err: any) {
+      toast.show(`同步失敗: ${err.message}`, 'error');
+    } finally {
       setIsSubmittingIcal(false);
-      setIcalUrl('');
-      toast.show('✅ 外部 iCal 訂閱成功！已自動導入新行程。', 'success');
-    }, 2000);
+    }
   };
 
   const getSourceBadge = (source: string) => {
