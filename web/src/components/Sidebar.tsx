@@ -42,8 +42,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
 
   return (
     <aside className="glass-panel desktop-sidebar" style={{
-      flex: '0 0 260px',
-      width: '260px',
+      flex: '0 0 270px',
+      width: '270px',
       padding: '24px',
       display: 'flex',
       flexDirection: 'column',
@@ -51,41 +51,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       height: 'calc(100vh - 32px)',
       position: 'sticky',
       top: '16px',
-      overflow: 'auto'
+      overflow: 'auto',
+      boxShadow: '0 20px 50px rgba(108, 92, 231, 0.05)',
+      border: '1px solid rgba(255, 255, 255, 0.4)'
     }}>
       {/* App Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '0 4px' }}>
         <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '12px',
-          background: 'var(--accent-primary)',
+          width: '42px',
+          height: '42px',
+          borderRadius: '14px',
+          background: 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)',
           color: '#fff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontWeight: 'bold',
-          fontSize: '20px'
+          fontWeight: '800',
+          fontSize: '22px',
+          boxShadow: '0 8px 20px rgba(108, 92, 231, 0.3)'
         }}>
           H
         </div>
         <div>
-          <h3 style={{ fontWeight: 'bold', fontSize: '18px' }}>家庭秘書</h3>
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>管家與自動化助手</span>
+          <h3 style={{ fontWeight: '800', fontSize: '19px', letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #4f46e5 0%, #9333ea 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>家庭秘書</h3>
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.05em' }}>管家與自動化助手</span>
         </div>
       </div>
 
       {/* 太太極速記事 Capture 流 (輸入框) */}
       <form onSubmit={handleQuickCapture} className="glass-card" style={{
         padding: '16px',
-        borderRadius: '12px',
+        borderRadius: '16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
-        background: 'var(--input-bg)'
+        gap: '12px',
+        background: 'rgba(255, 255, 255, 0.25)',
+        border: '1px solid rgba(255, 255, 255, 0.3)'
       }}>
-        <label style={{ fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>⚡ 太太極速記事 (批次輸入)</span>
+        <label style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>⚡ 太太極速記事</span>
         </label>
         <textarea
           value={quickInput}
@@ -94,25 +98,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           rows={3}
           style={{
             width: '100%',
-            background: 'rgba(255, 255, 255, 0.5)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '8px',
-            padding: '8px',
+            background: 'rgba(255, 255, 255, 0.6)',
+            border: '1px solid rgba(108, 92, 231, 0.15)',
+            borderRadius: '10px',
+            padding: '10px',
             fontSize: '12px',
             color: 'var(--text-primary)',
             resize: 'none',
-            outline: 'none'
+            outline: 'none',
+            lineHeight: '1.4',
+            transition: 'border-color 0.3s'
           }}
+          onFocus={(e) => e.currentTarget.style.borderColor = '#6c5ce7'}
+          onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(108, 92, 231, 0.15)'}
         />
         <button
           type="submit"
+          className="primary-btn"
           style={{
             width: '100%',
-            padding: '8px 16px',
-            borderRadius: '8px',
+            padding: '10px 16px',
+            borderRadius: '10px',
             border: 'none',
-            background: 'var(--accent-primary)',
-            color: '#fff',
             fontSize: '12px',
             fontWeight: 'bold',
             cursor: 'pointer',
@@ -122,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
             gap: '6px'
           }}
         >
-          <Send size={12} />
+          <Send size={13} />
           <span>批次拆解送出</span>
         </button>
       </form>
@@ -141,25 +148,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: '12px 18px',
                 border: 'none',
-                borderRadius: '12px',
+                borderRadius: '14px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: isActive ? 'bold' : 'normal',
+                fontWeight: isActive ? '700' : '500',
                 color: isActive ? '#fff' : 'var(--text-secondary)',
-                background: isActive ? 'var(--accent-primary)' : 'none',
+                background: isActive ? 'linear-gradient(135deg, #6c5ce7 0%, #805ad5 100%)' : 'transparent',
+                boxShadow: isActive ? '0 8px 24px rgba(108, 92, 231, 0.25)' : 'none',
                 textAlign: 'left',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
               onMouseOver={(e) => {
-                if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                if (!isActive) {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                }
               }}
               onMouseOut={(e) => {
-                if (!isActive) e.currentTarget.style.background = 'none';
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.transform = 'translateX(0)';
+                }
               }}
             >
-              <Icon size={18} />
+              <Icon size={18} style={{ opacity: isActive ? 1 : 0.8 }} />
               <span>{item.name}</span>
             </button>
           );

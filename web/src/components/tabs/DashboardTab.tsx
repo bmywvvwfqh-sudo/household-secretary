@@ -262,22 +262,24 @@ export const DashboardTab: React.FC = () => {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '24px',
-      animation: 'fadeIn 0.4s ease'
+      gap: '28px',
+      animation: 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
     }}>
       {/* 歡迎與溫馨小語 */}
       <div className="glass-panel" style={{
-        padding: '24px',
-        borderRadius: '16px',
-        background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.2) 0%, rgba(162, 155, 254, 0.1) 100%)',
-        position: 'relative'
+        padding: '32px',
+        borderRadius: '24px',
+        background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(162, 155, 254, 0.05) 100%)',
+        border: '1px solid rgba(255, 255, 255, 0.45)',
+        position: 'relative',
+        boxShadow: '0 20px 40px rgba(31, 38, 135, 0.03)'
       }}>
-        <h3 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '8px' }}>
+        <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px', letterSpacing: '-0.02em' }}>
           早安，家庭主理人！☀️
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.5' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6', fontWeight: 500 }}>
           「家人的安全與舒適，因為有您的悉心打理而完美。」<br />
-          今日有 {todayEvents.length} 項行程，{shoppingTotalCount} 項採買物資待補，本月飲食預算剩餘 {Math.max(100 - Math.floor(dietPercentage), 0)}%。
+          今日有 <strong style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>{todayEvents.length}</strong> 項行程，<strong style={{ color: 'var(--accent-success)', fontWeight: '700' }}>{shoppingTotalCount}</strong> 項採買物資待補，本月飲食預算剩餘 <strong style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>{Math.max(100 - Math.floor(dietPercentage), 0)}%</strong>。
         </p>
         
         {/* 快捷語音記帳漂浮鈕 */}
@@ -285,74 +287,101 @@ export const DashboardTab: React.FC = () => {
           onClick={handleVoiceTrigger}
           style={{
             position: 'absolute',
-            right: '24px',
-            bottom: '-20px',
-            width: '56px',
-            height: '56px',
+            right: '32px',
+            bottom: '-24px',
+            width: '60px',
+            height: '60px',
             borderRadius: '50%',
-            background: 'var(--accent-primary)',
+            background: 'linear-gradient(135deg, #6c5ce7 0%, #805ad5 100%)',
             color: '#fff',
             border: 'none',
             cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(108, 92, 231, 0.4)',
+            boxShadow: '0 8px 24px rgba(108, 92, 231, 0.35), 0 0 0 0px rgba(108, 92, 231, 0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'transform 0.2s'
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          title="太太專用一鍵語音記帳/記事"
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'scale(1.15) rotate(5deg)';
+            e.currentTarget.style.boxShadow = '0 12px 30px rgba(108, 92, 231, 0.5), 0 0 0 6px rgba(108, 92, 231, 0.15)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(108, 92, 231, 0.35), 0 0 0 0px rgba(108, 92, 231, 0.2)';
+          }}
+          title="一鍵語音記帳/記事"
         >
           <Mic size={24} />
         </button>
       </div>
 
-      {/* 🔴 新增：LINE 待確認語音/文字記事佇列面板 */}
+      {/* LINE 待確認語音/文字記事佇列面板 */}
       {unconfirmedTasks.length > 0 && (
         <div className="glass-panel" style={{
-          padding: '20px 24px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)',
-          border: '1px solid rgba(251, 191, 36, 0.3)',
+          padding: '24px 28px',
+          borderRadius: '24px',
+          background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0%, rgba(217, 119, 6, 0.02) 100%)',
+          border: '1px solid rgba(217, 119, 6, 0.25)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px'
+          gap: '14px',
+          boxShadow: '0 16px 36px rgba(217, 119, 6, 0.03)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={18} color="var(--accent-warning)" />
-            <span style={{ fontWeight: 'bold', fontSize: '15px' }}>💡 LINE 待確認語音/文字記事 ({unconfirmedTasks.length} 筆)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
+              background: 'rgba(217, 119, 6, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <FileText size={16} color="var(--accent-warning)" />
+            </div>
+            <span style={{ fontWeight: '800', fontSize: '16px', letterSpacing: '-0.01em' }}>💡 LINE 待確認語音/文字記事 ({unconfirmedTasks.length} 筆)</span>
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500 }}>
             以下是從 LINE 傳送過來但未能自動分類的訊息，請手動指派或清除：
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
             {unconfirmedTasks.map((task) => (
               <div key={task.id} className="glass-card" style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '12px 18px',
-                borderRadius: '12px',
-                background: 'rgba(255, 255, 255, 0.05)'
+                padding: '14px 20px',
+                borderRadius: '16px',
+                background: 'rgba(255, 255, 255, 0.4)',
+                border: '1px solid rgba(255, 255, 255, 0.5)'
               }}>
-                <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '14.5px', fontWeight: '700', color: 'var(--text-primary)' }}>
                   「{task.rawText}」
                 </span>
                 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <button
                     onClick={() => handleConvertTask(task, 'shopping')}
                     style={{
-                      padding: '4px 10px',
-                      borderRadius: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '10px',
                       border: 'none',
-                      background: 'rgba(52, 211, 153, 0.2)',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)',
                       color: 'var(--accent-success)',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
                     }}
                   >
                     轉為採買
@@ -360,14 +389,23 @@ export const DashboardTab: React.FC = () => {
                   <button
                     onClick={() => handleConvertTask(task, 'calendar')}
                     style={{
-                      padding: '4px 10px',
-                      borderRadius: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '10px',
                       border: 'none',
-                      background: 'rgba(108, 92, 231, 0.2)',
+                      background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(108, 92, 231, 0.05) 100%)',
                       color: 'var(--accent-primary)',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.background = 'rgba(108, 92, 231, 0.25)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.background = 'rgba(108, 92, 231, 0.15)';
                     }}
                   >
                     轉為行程
@@ -375,15 +413,23 @@ export const DashboardTab: React.FC = () => {
                   <button
                     onClick={() => handleDismissTask(task.id)}
                     style={{
-                      padding: '4px',
-                      borderRadius: '6px',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
                       border: 'none',
-                      background: 'rgba(239, 68, 68, 0.15)',
+                      background: 'rgba(220, 38, 38, 0.1)',
                       color: 'var(--accent-danger)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
                     }}
                     title="刪除"
                   >
@@ -400,42 +446,51 @@ export const DashboardTab: React.FC = () => {
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '20px',
-        marginTop: '10px'
+        gap: '24px',
+        marginTop: '8px'
       }}>
         {/* 今日行程卡片 */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-              <Calendar size={18} color="var(--accent-primary)" />
-              <span>今日行程</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(108, 92, 231, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Calendar size={18} color="var(--accent-primary)" />
+              </div>
+              <span style={{ fontWeight: '800', fontSize: '16px' }}>今日行程</span>
             </div>
             <span style={{ 
-              fontSize: '11px', 
-              padding: '2px 8px', 
-              borderRadius: '10px', 
+              fontSize: '12px', 
+              padding: '4px 10px', 
+              borderRadius: '20px', 
               background: 'rgba(108, 92, 231, 0.15)', 
               color: 'var(--accent-primary)', 
-              fontWeight: 'bold' 
+              fontWeight: '700' 
             }}>
               {todayEvents.length} 項
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {loading ? (
               <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>載入中...</div>
             ) : todayEvents.length === 0 ? (
-              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>
                 🎉 太棒了！今天沒有任何待辦行程。
               </div>
             ) : (
               todayEvents.map((evt) => (
-                <div key={evt.id} style={{ display: 'flex', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--glass-border)' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-primary)' }}>
+                <div key={evt.id} style={{ display: 'flex', gap: '14px', padding: '4px 0', alignItems: 'center' }}>
+                  <span style={{ 
+                    fontSize: '12px', 
+                    fontWeight: '700', 
+                    color: 'var(--accent-primary)',
+                    background: 'rgba(108, 92, 231, 0.08)',
+                    padding: '4px 10px',
+                    borderRadius: '8px'
+                  }}>
                     {formatTime(evt.dateTime)}
                   </span>
-                  <span style={{ fontSize: '13px' }}>{evt.title}</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600' }}>{evt.title}</span>
                 </div>
               ))
             )}
@@ -443,43 +498,53 @@ export const DashboardTab: React.FC = () => {
         </div>
 
         {/* 待買清單卡片 */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-              <ShoppingBag size={18} color="var(--accent-success)" />
-              <span>待買清單</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(5, 150, 105, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingBag size={18} color="var(--accent-success)" />
+              </div>
+              <span style={{ fontWeight: '800', fontSize: '16px' }}>待買清單</span>
             </div>
             <span style={{ 
-              fontSize: '11px', 
-              padding: '2px 8px', 
-              borderRadius: '10px', 
-              background: 'rgba(52, 211, 153, 0.15)', 
+              fontSize: '12px', 
+              padding: '4px 10px', 
+              borderRadius: '20px', 
+              background: 'rgba(5, 150, 105, 0.15)', 
               color: 'var(--accent-success)', 
-              fontWeight: 'bold' 
+              fontWeight: '700' 
             }}>
               {shoppingTotalCount} 項
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {loading ? (
               <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>載入中...</div>
             ) : shoppingItems.length === 0 ? (
-              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>
                 🛒 家中物資齊全，目前無待買項目。
               </div>
             ) : (
               shoppingItems.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--glass-border)' }}>
-                  <span style={{ fontSize: '13px' }}>{item.item}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--accent-success)', fontWeight: 'bold' }}>
-                    [{item.store}]
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600' }}>{item.item}</span>
+                  <span style={{ 
+                    fontSize: '11px', 
+                    color: 'var(--accent-success)', 
+                    fontWeight: '800',
+                    background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.12) 0%, rgba(5, 150, 105, 0.03) 100%)',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(5, 150, 105, 0.15)'
+                  }}>
+                    {item.store}
                   </span>
                 </div>
               ))
             )}
             {shoppingTotalCount > 3 && (
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'right', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'right', marginTop: '6px', fontWeight: 500 }}>
                 ...以及其他 {shoppingTotalCount - 3} 項物資
               </div>
             )}
@@ -487,49 +552,65 @@ export const DashboardTab: React.FC = () => {
         </div>
 
         {/* 財務預算預警卡片 */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-              <DollarSign size={18} color={dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--accent-success)'} />
-              <span>預算狀態</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ 
+                width: '32px', 
+                height: '32px', 
+                borderRadius: '10px', 
+                background: dietPercentage >= 100 ? 'rgba(220, 38, 38, 0.1)' : dietPercentage >= 80 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(5, 150, 105, 0.1)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <DollarSign size={18} color={dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--accent-success)'} />
+              </div>
+              <span style={{ fontWeight: '800', fontSize: '16px' }}>預算狀態</span>
             </div>
             <span style={{ 
-              fontSize: '11px', 
-              padding: '2px 8px', 
-              borderRadius: '10px', 
-              background: dietPercentage >= 100 ? 'rgba(239, 68, 68, 0.15)' : dietPercentage >= 80 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(52, 211, 153, 0.15)', 
+              fontSize: '12px', 
+              padding: '4px 10px', 
+              borderRadius: '20px', 
+              background: dietPercentage >= 100 ? 'rgba(220, 38, 38, 0.15)' : dietPercentage >= 80 ? 'rgba(217, 119, 6, 0.15)' : 'rgba(5, 150, 105, 0.15)', 
               color: dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--accent-success)', 
-              fontWeight: 'bold' 
+              fontWeight: '700' 
             }}>
               {dietPercentage >= 100 ? '爆表' : dietPercentage >= 80 ? '注意' : '安全'}
             </span>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {loading ? (
               <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>載入中...</div>
             ) : (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600 }}>
                   <span>本月飲食預算:</span>
-                  <span style={{ fontWeight: 'bold' }}>
-                    ${dietExpenseTotal.toLocaleString()} / ${budgetLimit.toLocaleString()}
+                  <span style={{ color: 'var(--text-primary)' }}>
+                    ${dietExpenseTotal.toLocaleString()} / <span style={{ color: 'var(--text-secondary)' }}>${budgetLimit.toLocaleString()}</span>
                   </span>
                 </div>
                 
                 {/* 預算進度條 */}
                 <div style={{
                   width: '100%',
-                  height: '8px',
-                  borderRadius: '4px',
-                  background: 'var(--glass-border)',
-                  overflow: 'hidden'
+                  height: '10px',
+                  borderRadius: '5px',
+                  background: 'rgba(0, 0, 0, 0.05)',
+                  overflow: 'hidden',
+                  position: 'relative'
                 }}>
                   <div style={{
                     width: `${Math.min(dietPercentage, 100)}%`,
                     height: '100%',
-                    background: dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--accent-success)',
-                    borderRadius: '4px'
+                    background: dietPercentage >= 100 
+                      ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)' 
+                      : dietPercentage >= 80 
+                      ? 'linear-gradient(90deg, #fbbf24 0%, #d97706 100%)' 
+                      : 'linear-gradient(90deg, #34d399 0%, #059669 100%)',
+                    borderRadius: '5px',
+                    transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
                   }} />
                 </div>
                 
@@ -538,9 +619,9 @@ export const DashboardTab: React.FC = () => {
                   alignItems: 'center',
                   gap: '6px',
                   color: dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  marginTop: '6px'
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  marginTop: '4px'
                 }}>
                   <AlertTriangle size={14} />
                   <span>

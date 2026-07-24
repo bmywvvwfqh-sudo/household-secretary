@@ -38,9 +38,16 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-gradient)', color: 'var(--text-primary)' }}>
+    <div style={{ minHeight: '100vh', position: 'relative', overflowX: 'hidden', color: 'var(--text-primary)' }}>
+      {/* 🔮 夢幻極光發光背景氣泡 */}
+      <div className="bg-glow-container">
+        <div className="bg-glow-blob blob-1"></div>
+        <div className="bg-glow-blob blob-2"></div>
+        <div className="bg-glow-blob blob-3"></div>
+      </div>
+
       <Header />
-      <div style={{ display: 'flex', maxWidth: '1200px', margin: '0 auto', padding: '16px', gap: '24px' }}>
+      <div style={{ display: 'flex', maxWidth: '1250px', margin: '0 auto', padding: '16px', gap: '24px', position: 'relative', zIndex: 1 }}>
         {isDesktop && <Sidebar currentTab={activeTab} setCurrentTab={(tab) => setActiveTab(tab as TabId)} />}
         <main style={{ flex: 1, minWidth: 0, paddingBottom: '100px' }}>
           {renderTab()}

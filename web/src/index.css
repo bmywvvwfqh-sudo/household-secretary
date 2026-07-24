@@ -1,152 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 :root {
-  /* ── 家庭秘書設計系統 CSS 變數 ── */
+  /* ── 頂奢家庭秘書設計系統 ── */
 
-  /* 背景 */
-  --bg-gradient: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #fdf2f8 100%);
-
-  /* 文字 */
-  --text-primary:   #1e1b2e;
-  --text-secondary: #6b7280;
-
-  /* 主色調 */
+  /* 配色方案 (HSL 優雅色彩) */
+  --bg-gradient: linear-gradient(135deg, #f7f9fc 0%, #f1eefd 50%, #fef3f7 100%);
+  
+  --text-primary:   #0f172a; /* 現代 slate-900 */
+  --text-secondary: #475569; /* slate-600 */
+  
   --accent-primary:   #6c5ce7;
-  --accent-secondary: #a78bfa;
-  --accent-success:   #10b981;
-  --accent-warning:   #f59e0b;
-  --accent-danger:    #ef4444;
+  --accent-secondary: #a29bfe;
+  --accent-success:   #059669; /* emerald-600 */
+  --accent-warning:   #d97706; /* amber-600 */
+  --accent-danger:    #dc2626; /* red-600 */
+  
+  /* Glassmorphism 面板與邊框細緻化 */
+  --glass-bg:     rgba(255, 255, 255, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --card-glow:    rgba(108, 92, 231, 0.12);
 
-  /* Glassmorphism */
-  --glass-bg:     rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --card-glow:    rgba(108, 92, 231, 0.25);
+  --font-sans: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* 舊變數（保留相容） */
-  --text:    #6b6375;
-  --text-h:  #08060d;
-  --bg:      #fff;
-  --border:  #e5e4e7;
-  --sans:    system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono:    ui-monospace, Consolas, monospace;
-
-  font: 16px/1.5 var(--sans);
+  font-family: var(--font-sans);
   color: var(--text-primary);
   background: var(--bg-gradient);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 深色模式 */
+/* 現代深色模式 (Sleek Dark Mode) */
 [data-theme='dark'] {
-  --bg-gradient:    linear-gradient(135deg, #1e1b2e 0%, #2d1b69 50%, #1a1a2e 100%);
-  --text-primary:   #f3f4f6;
-  --text-secondary: #9ca3af;
-  --glass-bg:       rgba(30, 27, 46, 0.7);
-  --glass-border:   rgba(255, 255, 255, 0.1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --bg-gradient: linear-gradient(135deg, #080711 0%, #120c2b 50%, #0a0a14 100%);
+  --text-primary:   #f8fafc;
+  --text-secondary: #94a3b8;
+  --glass-bg:       rgba(15, 12, 30, 0.6);
+  --glass-border:   rgba(255, 255, 255, 0.08);
+  --card-glow:      rgba(162, 155, 254, 0.15);
 }
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   background: var(--bg-gradient);
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* ── Glassmorphism 元件 ── */
+/* ── 精緻極光背景氣泡動畫 ── */
+.bg-glow-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-glow-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(140px);
+  opacity: 0.35;
+  mix-blend-mode: screen;
+}
+
+.blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(108, 92, 231, 0.4) 0%, rgba(162, 155, 254, 0) 70%);
+  animation: float-slow 35s infinite alternate ease-in-out;
+}
+
+.blob-2 {
+  bottom: -20%;
+  right: -10%;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(253, 114, 130, 0.3) 0%, rgba(254, 243, 199, 0) 70%);
+  animation: float-slow 40s infinite alternate-reverse ease-in-out;
+}
+
+.blob-3 {
+  top: 40%;
+  left: 50%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, rgba(16, 185, 129, 0) 70%);
+  animation: float-medium 28s infinite alternate ease-in-out;
+}
+
+@keyframes float-slow {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate(80px, 60px) rotate(180deg) scale(1.1); }
+  100% { transform: translate(-40px, -80px) rotate(360deg) scale(0.9); }
+}
+
+@keyframes float-medium {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-60px, 80px) scale(1.15); }
+  100% { transform: translate(40px, -40px) scale(0.95); }
+}
+
+/* ── 頂級 Glassmorphism 面板與卡片 ── */
 .glass-panel {
-  background:    var(--glass-bg);
-  border:        1px solid var(--glass-border);
-  border-radius: 20px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 0 16px 48px 0 rgba(31, 38, 135, 0.04), 
+              inset 0 1px 2px rgba(255, 255, 255, 0.25);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card {
-  background:    var(--glass-bg);
-  border:        1px solid var(--glass-border);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.03),
+              inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(108, 92, 231, 0.35);
+  box-shadow: 0 20px 48px 0 rgba(108, 92, 231, 0.08),
+              inset 0 1px 3px rgba(255, 255, 255, 0.4);
+}
+
+/* ── 現代字型等級 ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+/* ── 響應式高級滾動條 ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(108, 92, 231, 0.12);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(108, 92, 231, 0.3);
+}
+
+/* ── 輸入框與按鈕統一美化 ── */
+input[type="text"], input[type="number"], select, textarea {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+[data-theme='dark'] input[type="text"], 
+[data-theme='dark'] input[type="number"], 
+[data-theme='dark'] select, 
+[data-theme='dark'] textarea {
+  background: rgba(15, 12, 30, 0.4);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.15);
+  background: rgba(255, 255, 255, 0.85);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+button.primary-btn {
+  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.25);
+  transition: all 0.3s ease;
+}
+button.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(108, 92, 231, 0.4);
+  filter: brightness(1.05);
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-}
-
-/* ── 響應式版面 ── */
+/* ── 響應式排版支援 ── */
 @media (max-width: 768px) {
   .desktop-sidebar {
     display: none !important;
