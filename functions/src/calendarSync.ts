@@ -20,10 +20,16 @@ export const syncExternalCalendar = onCall(async (request) => {
   }
 
   try {
-    console.log(`開始同步家庭 ${familyId} 的外部日曆: ${icalUrl}`);
+    // 🔴 容錯清洗：將 iOS iCloud 的 webcal:// 協定強制替換為 https:// 才能被 node-ical 正常下載
+    let targetUrl = icalUrl.trim();
+    if (targetUrl.toLowerCase().startsWith('webcal://')) {
+      targetUrl = 'https://' + targetUrl.substring(9);
+    }
+
+    console.log(`開始同步家庭 ${familyId} 的外部日曆: ${targetUrl}`);
     
     // 1. 抓取並解析 .ics 內容
-    const webEvents = await ical.fromURL(icalUrl);
+    const webEvents = await ical.fromURL(targetUrl);
     const batch = db.batch();
     let syncCount = 0;
 
