@@ -440,6 +440,16 @@ async function saveParsedTasks(
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         source: 'line'
       });
+    } else if (task.type === 'chore') {
+      // 家務分工寫入
+      const ref = db.collection('families').doc(familyId).collection('chores').doc();
+      batch.set(ref, {
+        task: task.choreTask || '未指派家務',
+        assignee: task.choreAssignee || '共同',
+        isDone: false,
+        createdBy: 'LINE 管家',
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
     } else {
       // unconfirmed 寫入前端待確認佇列
       const ref = db.collection('unconfirmedQueue').doc();

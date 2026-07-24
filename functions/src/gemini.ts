@@ -6,8 +6,8 @@ const taskSchema = {
   properties: {
     type: {
       type: 'string',
-      enum: ['calendar', 'shopping', 'finance', 'unconfirmed'],
-      description: '項目類別：calendar (行程行事曆), shopping (店家採買清單), finance (財務收支記帳), unconfirmed (無法解析/待確認記事)'
+      enum: ['calendar', 'shopping', 'finance', 'chore', 'unconfirmed'],
+      description: '項目類別：calendar (行程行事曆), shopping (店家採買清單), finance (財務收支記帳), chore (家務分配), unconfirmed (無法解析/待確認記事)'
     },
     // 行程欄位
     title: { type: 'string', description: '行程標題 (如：帶貓咪看醫生)' },
@@ -27,6 +27,10 @@ const taskSchema = {
       description: '收支方向：expense (支出), income (收入)'
     },
     remark: { type: 'string', description: '備註說明' },
+
+    // 家務欄位
+    choreTask: { type: 'string', description: '家務工作內容 (如：裝水, 倒垃圾, 吸地板)' },
+    choreAssignee: { type: 'string', enum: ['媽媽', '爸爸', '小孩', '共同'], description: '家務負責人 (若沒提到是誰，預設為「共同」)' },
 
     // 待確認欄位
     rawText: { type: 'string', description: '當無法明確歸類時，保留其原始文字內容' }
@@ -51,7 +55,7 @@ const geminiOutputSchema = {
 };
 
 export interface GeminiParsedTask {
-  type: 'calendar' | 'shopping' | 'finance' | 'unconfirmed';
+  type: 'calendar' | 'shopping' | 'finance' | 'chore' | 'unconfirmed';
   title?: string;
   dateTime?: string;
   item?: string;
@@ -61,6 +65,8 @@ export interface GeminiParsedTask {
   category?: string;
   direction?: 'expense' | 'income';
   remark?: string;
+  choreTask?: string;
+  choreAssignee?: string;
   rawText?: string;
 }
 
@@ -93,10 +99,11 @@ export async function parseInputWithGemini(
   });
 
   const systemInstruction = `
-你是一位貼心的家庭秘書 AI 管家。你的任務是將用戶（主要是太太）發送的語音或文字訊息進行批次拆解，分類為以下三類項目：
+你是一位貼心的家庭秘書 AI 管家。你的任務是將用戶（主要是太太）發送的語音或文字訊息進行批次拆解，分類為以下四類項目：
 1. 共享行事曆 (calendar)：與時間、約定、提醒相關。
 2. 特定店家採買 (shopping)：提及特定店家（如：全聯、好市多、家樂福、傳統市場）的採買物資。
 3. 財務記帳 (finance)：提及金錢支出或收入的項目。
+4. 家務分配 (chore)：與家庭雜事分工、打掃、家務指派等相關（如：「請爸爸去裝水」、「吸地板」、「洗碗」、「媽媽記得曬衣服」）。
 
 ### 當前日期基準 (asOfDate) 參考：
 當前時間基準為：${asOfDate}
@@ -106,6 +113,7 @@ export async function parseInputWithGemini(
 - 行程 (calendar)：標題標示為 title，時間標示為 dateTime (格式：YYYY-MM-DDTHH:mm:ss)。
 - 採買 (shopping)：物品標示為 item，店家標示為 store，數量/規格標示為 quantity。
 - 記帳 (finance)：金額為整數 amount，分類為 category（請從中文字面判斷，如: 水電、餐飲、交通、娛樂），收支方向 direction 必須為 'expense' (支出) 或 'income' (收入)。
+- 家務 (chore)：工作內容標示為 choreTask，負責人標示為 choreAssignee (其值只能是 '媽媽', '爸爸', '小孩', '共同' 之一。如果文字中沒有明確提到是誰要做，請設為 '共同')。
 - 待確認項目 (unconfirmed)：如果無法精準分類或內容含糊，請將 type 設為 'unconfirmed'，並將原文記錄在 rawText。
 
 最後，寫一句簡短、繁體中文且帶有親切溫馨氣氛的 rawReply 作為對使用者的答覆，告訴他們你已經登記了哪些項目（例如：「好的，太太！我已經幫您記下了週六帶貓看醫生，還有好市多的牛奶採買囉！🥰」）。
