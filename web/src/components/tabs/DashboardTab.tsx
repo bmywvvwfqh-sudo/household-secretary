@@ -5,8 +5,6 @@ import {
   DollarSign, 
   Mic, 
   AlertTriangle,
-  ArrowRight,
-  Check,
   X,
   FileText
 } from 'lucide-react';
