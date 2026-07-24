@@ -508,7 +508,6 @@ async function handleLineCommands(
           replyText += `${idx + 1}. [${evt.time}] ${evt.title} (${evt.source})\n`;
         });
       }
-      replyText += '\n----------------\n💡 傳送「明天下午三點看牙醫」，管家就會自動幫您排入行程喔！';
 
       await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: replyText }]);
       return true;
@@ -552,7 +551,6 @@ async function handleLineCommands(
           });
         });
       }
-      replyText += '\n----------------\n💡 傳送「全聯買鮮奶 2 瓶」，管家就會自動將物資存入清單中喔！';
 
       await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: replyText }]);
       return true;
@@ -586,7 +584,6 @@ async function handleLineCommands(
           replyText += `${idx + 1}. 「${task}」\n`;
         });
       }
-      replyText += '\n----------------\n💡 您可以隨時登入網頁控制台，將這些項目一鍵「轉為採買」、「轉為行程」或刪除喔！';
 
       await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: replyText }]);
       return true;
