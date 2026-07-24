@@ -597,4 +597,4 @@ async function handleLineCommands(
   return false;
 }
 
-export { syncExternalCalendar } from './calendarSync';
+export { syncExternalCalendar, autoSyncCalendars } from './calendarSync';
