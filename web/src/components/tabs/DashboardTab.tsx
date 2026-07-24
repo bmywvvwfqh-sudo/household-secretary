@@ -4,12 +4,17 @@ import {
   ShoppingBag, 
   DollarSign, 
   Mic, 
-  AlertTriangle
+  AlertTriangle,
+  ArrowRight,
+  Check,
+  X,
+  FileText
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { BindingPanel } from '../BindingPanel';
 import { db } from '../../firebase';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useAuth } from '../../context/AuthContext';
 
 interface CalendarEvent {
   id: string;
@@ -24,7 +29,15 @@ interface ShoppingItem {
   isBought: boolean;
 }
 
+interface UnconfirmedTask {
+  id: string;
+  rawText: string;
+  createdAt: any;
+  status: string;
+}
+
 export const DashboardTab: React.FC = () => {
+  const { user } = useAuth();
   const toast = useToast();
   
   // 狀態管理
@@ -33,14 +46,15 @@ export const DashboardTab: React.FC = () => {
   const [shoppingTotalCount, setShoppingTotalCount] = useState<number>(0);
   const [dietExpenseTotal, setDietExpenseTotal] = useState<number>(0);
   const [budgetLimit] = useState<number>(20000); // 飲食預設上限 2 萬元
+  const [unconfirmedTasks, setUnconfirmedTasks] = useState<UnconfirmedTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const familyId = "family-123"; // 專案 MVP 固定家庭 ID
+  // 🔴 修正：優先使用真實登入的 Google UID 作為家庭 ID，訪客模式下 fallback 為 MVP 固定 ID
+  const familyId = user?.uid || "family-123";
 
   // 取得今天與當月的字串基準 (台北時間為佳)
   const getTodayAndMonthString = () => {
     const now = new Date();
-    // 轉為台北時間 YYYY-MM-DD
     const tzOffset = 8 * 60; // 台北時區 +8 小時
     const localTime = new Date(now.getTime() + tzOffset * 60 * 1000);
     const isoStr = localTime.toISOString();
@@ -65,11 +79,13 @@ export const DashboardTab: React.FC = () => {
       ]);
       setShoppingTotalCount(3);
       setDietExpenseTotal(15000); // 佔 75%
+      setUnconfirmedTasks([
+        { id: 'mock-1', rawText: '好市多買牛奶 帶宥均看醫生', createdAt: new Date(), status: 'pending' }
+      ]);
       setLoading(false);
       return;
     }
 
-    // 真實 Firestore 連線監聽
     setLoading(true);
 
     // 1. 監聽行事曆今日行程
@@ -78,7 +94,6 @@ export const DashboardTab: React.FC = () => {
       const events: CalendarEvent[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // 篩選今日行程：dateTime 開頭為今天 YYYY-MM-DD
         if (data.dateTime && data.dateTime.startsWith(todayStr)) {
           events.push({
             id: doc.id,
@@ -87,7 +102,6 @@ export const DashboardTab: React.FC = () => {
           });
         }
       });
-      // 依時間排序
       events.sort((a, b) => a.dateTime.localeCompare(b.dateTime));
       setTodayEvents(events);
     }, (err) => console.error('Dashboard 行事曆載入失敗:', err));
@@ -108,7 +122,6 @@ export const DashboardTab: React.FC = () => {
         }
       });
       setShoppingTotalCount(activeItems.length);
-      // 只取前 3 個展示於儀表板
       setShoppingItems(activeItems.slice(0, 3));
     }, (err) => console.error('Dashboard 待買清單載入失敗:', err));
 
@@ -118,7 +131,6 @@ export const DashboardTab: React.FC = () => {
       let dietSum = 0;
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // 篩選當月、支出、類別為飲食
         const isCurrentMonth = data.date && data.date.startsWith(currentMonthStr);
         const isDietExpense = data.direction === 'expense' && data.category === '飲食';
         if (isCurrentMonth && isDietExpense) {
@@ -126,9 +138,29 @@ export const DashboardTab: React.FC = () => {
         }
       });
       setDietExpenseTotal(dietSum);
+    }, (err) => console.error('Dashboard 財務預算載入失敗:', err));
+
+    // 4. 🔴 新增：監聽根目錄的 unconfirmedQueue (待確認佇列)
+    const unconfirmedQuery = query(
+      collection(db, 'unconfirmedQueue'),
+      where('familyId', '==', familyId),
+      where('status', '==', 'pending')
+    );
+    const unsubscribeUnconfirmed = onSnapshot(unconfirmedQuery, (snapshot) => {
+      const tasks: UnconfirmedTask[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        tasks.push({
+          id: doc.id,
+          rawText: data.rawText,
+          createdAt: data.createdAt,
+          status: data.status
+        });
+      });
+      setUnconfirmedTasks(tasks);
       setLoading(false);
     }, (err) => {
-      console.error('Dashboard 財務預算載入失敗:', err);
+      console.error('Dashboard 待確認佇列載入失敗:', err);
       setLoading(false);
     });
 
@@ -136,15 +168,15 @@ export const DashboardTab: React.FC = () => {
       unsubscribeCalendar();
       unsubscribeShopping();
       unsubscribeExpense();
+      unsubscribeUnconfirmed();
     };
-  }, []);
+  }, [familyId]);
 
   const handleVoiceTrigger = () => {
     toast.show('🎤 正在錄音中...請對著麥克風說話。', 'info');
     setTimeout(() => {
       toast.show('🎤 錄音結束，正在傳送音檔 (2.4MB) 直送 Gemini 解析...', 'info');
       setTimeout(() => {
-        // 模擬 Gemini 寫入後的即時 UI 反應（訪客模式）
         if (!db) {
           setDietExpenseTotal((prev) => {
             const next = prev + 850;
@@ -164,14 +196,65 @@ export const DashboardTab: React.FC = () => {
     }, 2000);
   };
 
+  // 待確認任務轉化邏輯
+  const handleConvertTask = async (task: UnconfirmedTask, targetType: 'shopping' | 'calendar') => {
+    try {
+      if (db) {
+        if (targetType === 'shopping') {
+          // 轉為採買清單：預設拆解或整句當作項目
+          await addDoc(collection(db, 'families', familyId, 'shoppingList'), {
+            item: task.rawText,
+            store: '一般採買',
+            quantity: '1',
+            isBought: false,
+            createdBy: '網頁手動分配',
+            createdAt: new Date(),
+            source: 'web_convert'
+          });
+          toast.show('已成功轉為「採買清單」！', 'success');
+        } else {
+          // 轉為行事曆行程：預設為今日
+          await addDoc(collection(db, 'families', familyId, 'calendarEvents'), {
+            title: task.rawText,
+            dateTime: `${todayStr}T12:00:00`, // 預設中午
+            createdBy: '網頁手動分配',
+            createdAt: new Date(),
+            source: 'web_convert'
+          });
+          toast.show('已成功轉為「今日行程」！', 'success');
+        }
+        // 更新待確認佇列狀態為已處裡
+        await updateDoc(doc(db, 'unconfirmedQueue', task.id), { status: 'processed' });
+      } else {
+        // Mock 刪除
+        setUnconfirmedTasks((prev) => prev.filter((t) => t.id !== task.id));
+        toast.show(`(Mock) 已將該項目轉化為 ${targetType === 'shopping' ? '採買' : '行程'}！`, 'success');
+      }
+    } catch (err: any) {
+      toast.show(`轉換失敗: ${err.message}`, 'error');
+    }
+  };
+
+  const handleDismissTask = async (id: string) => {
+    try {
+      if (db) {
+        await deleteDoc(doc(db, 'unconfirmedQueue', id));
+      } else {
+        setUnconfirmedTasks((prev) => prev.filter((t) => t.id !== id));
+      }
+      toast.show('已清除該筆待確認記事。', 'info');
+    } catch (err: any) {
+      toast.show(`清除失敗: ${err.message}`, 'error');
+    }
+  };
+
   const dietPercentage = (dietExpenseTotal / budgetLimit) * 100;
 
-  // 格式化時間 (HH:mm)
   const formatTime = (dateTimeStr: string) => {
     try {
       const parts = dateTimeStr.split('T');
       if (parts.length > 1) {
-        return parts[1].substring(0, 5); // 取得 HH:mm
+        return parts[1].substring(0, 5);
       }
     } catch {}
     return '--:--';
@@ -226,6 +309,94 @@ export const DashboardTab: React.FC = () => {
           <Mic size={24} />
         </button>
       </div>
+
+      {/* 🔴 新增：LINE 待確認語音/文字記事佇列面板 */}
+      {unconfirmedTasks.length > 0 && (
+        <div className="glass-panel" style={{
+          padding: '20px 24px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)',
+          border: '1px solid rgba(251, 191, 36, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={18} color="var(--accent-warning)" />
+            <span style={{ fontWeight: 'bold', fontSize: '15px' }}>💡 LINE 待確認語音/文字記事 ({unconfirmedTasks.length} 筆)</span>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+            以下是從 LINE 傳送過來但未能自動分類的訊息，請手動指派或清除：
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+            {unconfirmedTasks.map((task) => (
+              <div key={task.id} className="glass-card" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 18px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.05)'
+              }}>
+                <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  「{task.rawText}」
+                </span>
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleConvertTask(task, 'shopping')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'rgba(52, 211, 153, 0.2)',
+                      color: 'var(--accent-success)',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    轉為採買
+                  </button>
+                  <button
+                    onClick={() => handleConvertTask(task, 'calendar')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'rgba(108, 92, 231, 0.2)',
+                      color: 'var(--accent-primary)',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    轉為行程
+                  </button>
+                  <button
+                    onClick={() => handleDismissTask(task.id)}
+                    style={{
+                      padding: '4px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: 'var(--accent-danger)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="刪除"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 三欄儀表板 */}
       <div style={{
