@@ -8,6 +8,7 @@ import { checkBudgetAlert } from './financeLedger';
 
 admin.initializeApp();
 const db = admin.firestore();
+db.settings({ ignoreUndefinedProperties: true });
 
 // 取得環境變數，提供 Safe Fallback
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '';
@@ -351,8 +352,8 @@ async function saveParsedTasks(
     if (task.type === 'calendar') {
       const ref = db.collection('families').doc(familyId).collection('calendarEvents').doc();
       batch.set(ref, {
-        title: task.title,
-        dateTime: task.dateTime,
+        title: task.title || '未命名行程',
+        dateTime: task.dateTime || new Date().toISOString(),
         createdBy: lineUserId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         source: 'line'
@@ -360,7 +361,7 @@ async function saveParsedTasks(
     } else if (task.type === 'shopping') {
       const ref = db.collection('families').doc(familyId).collection('shoppingList').doc();
       batch.set(ref, {
-        item: task.item,
+        item: task.item || '未指定採買物',
         store: task.store || '一般採買',
         quantity: task.quantity || '1',
         isBought: false,
@@ -372,7 +373,7 @@ async function saveParsedTasks(
       // 財務記帳 (Phase 4 規格: 移除 balance 餘額實體欄，全面動態 Ledger 記帳)
       const ref = db.collection('families').doc(familyId).collection('expenses').doc();
       batch.set(ref, {
-        amount: task.amount,
+        amount: task.amount !== undefined ? task.amount : 0,
         category: task.category || '未分類',
         direction: task.direction || 'expense',
         remark: task.remark || '',
