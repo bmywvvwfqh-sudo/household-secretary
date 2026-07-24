@@ -184,6 +184,8 @@ async function processEventCore(event: LineWebhookEvent): Promise<void> {
 
   if (message.type === 'text') {
     textContent = message.text;
+    const intercepted = await handleLineCommands(familyId, lineUserId, replyToken, textContent);
+    if (intercepted) return;
   } else if (message.type === 'audio') {
     // 語音檔下載 (限制大於 10MB 將拒絕)
     try {
@@ -352,7 +354,7 @@ async function saveParsedTasks(
     if (task.type === 'calendar') {
       const ref = db.collection('families').doc(familyId).collection('calendarEvents').doc();
       batch.set(ref, {
-        title: task.title || '未命名行程',
+        title: task.title || task.item || '未命名行程',
         dateTime: task.dateTime || new Date().toISOString(),
         createdBy: lineUserId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -361,7 +363,7 @@ async function saveParsedTasks(
     } else if (task.type === 'shopping') {
       const ref = db.collection('families').doc(familyId).collection('shoppingList').doc();
       batch.set(ref, {
-        item: task.item || '未指定採買物',
+        item: task.item || task.title || '未指定採買物',
         store: task.store || '一般採買',
         quantity: task.quantity || '1',
         isBought: false,
@@ -458,6 +460,144 @@ async function sendReplyOrPush(
   }
   // 降級為 Push Message 推送
   await pushLineMessage(lineUserId, messages, LINE_CHANNEL_ACCESS_TOKEN);
+}
+
+/**
+ * 處理 LINE 圖文選單特定關鍵字查詢指令，直接查庫返回，跳過 Gemini 呼叫以加速並省流量
+ */
+async function handleLineCommands(
+  familyId: string,
+  lineUserId: string,
+  replyToken: string,
+  text: string
+): Promise<boolean> {
+  const cleanText = text.trim();
+  
+  // 1. 當日待辦事項
+  if (cleanText === '當日待辦事項' || cleanText.toLowerCase() === 'today') {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const startOfDay = `${todayStr}T00:00:00.000Z`;
+      const endOfDay = `${todayStr}T23:59:59.999Z`;
+
+      const snapshot = await db
+        .collection('families')
+        .doc(familyId)
+        .collection('calendarEvents')
+        .where('dateTime', '>=', startOfDay)
+        .where('dateTime', '<=', endOfDay)
+        .get();
+
+      const events: any[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        events.push({
+          title: data.title,
+          time: data.dateTime ? data.dateTime.split('T')[1]?.substring(0, 5) : '--:--',
+          source: data.source === 'line' ? 'LINE' : data.source === 'web' ? '網頁' : data.source === 'ical' ? 'iCal 訂閱' : '其他'
+        });
+      });
+
+      events.sort((a, b) => a.time.localeCompare(b.time));
+
+      let replyText = `📅 共享當日待辦行程 (${todayStr.replace(/-/g, '/')})：\n`;
+      if (events.length === 0) {
+        replyText += '🎉 太棒了！今天目前沒有安排任何行程。';
+      } else {
+        events.forEach((evt, idx) => {
+          replyText += `${idx + 1}. [${evt.time}] ${evt.title} (${evt.source})\n`;
+        });
+      }
+      replyText += '\n----------------\n💡 傳送「明天下午三點看牙醫」，管家就會自動幫您排入行程喔！';
+
+      await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: replyText }]);
+      return true;
+    } catch (err: any) {
+      console.error('查詢當日待辦失敗:', err);
+      await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: `⚠️ 查詢失敗: ${err.message}` }]);
+      return true;
+    }
+  }
+
+  // 2. 購買清單
+  if (cleanText === '購買清單' || cleanText.toLowerCase() === 'shopping') {
+    try {
+      const snapshot = await db
+        .collection('families')
+        .doc(familyId)
+        .collection('shoppingList')
+        .where('isBought', '==', false)
+        .get();
+
+      const storeMap: Record<string, string[]> = {};
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const store = data.store || '一般採買';
+        const itemStr = `${data.item}${data.quantity ? ` (${data.quantity})` : ''}`;
+        if (!storeMap[store]) {
+          storeMap[store] = [];
+        }
+        storeMap[store].push(itemStr);
+      });
+
+      let replyText = `🛒 當前家庭購買清單：\n`;
+      const stores = Object.keys(storeMap);
+      if (stores.length === 0) {
+        replyText += '🛒 家中物資齊全，目前無待買項目！';
+      } else {
+        stores.forEach(store => {
+          replyText += `\n【${store}】\n`;
+          storeMap[store].forEach(item => {
+            replyText += `- ${item}\n`;
+          });
+        });
+      }
+      replyText += '\n----------------\n💡 傳送「全聯買鮮奶 2 瓶」，管家就會自動將物資存入清單中喔！';
+
+      await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: replyText }]);
+      return true;
+    } catch (err: any) {
+      console.error('查詢購買清單失敗:', err);
+      await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: `⚠️ 查詢失敗: ${err.message}` }]);
+      return true;
+    }
+  }
+
+  // 3. 未完成事項
+  if (cleanText === '未完成事項' || cleanText.toLowerCase() === 'pending') {
+    try {
+      const snapshot = await db
+        .collection('unconfirmedQueue')
+        .where('familyId', '==', familyId)
+        .where('status', '==', 'pending')
+        .get();
+
+      const tasks: string[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        tasks.push(data.rawText || '未明原始記事');
+      });
+
+      let replyText = `💡 待確認記事佇列 (共 ${tasks.length} 筆)：\n`;
+      if (tasks.length === 0) {
+        replyText += '✅ 目前沒有任何待確認記事，太棒了！';
+      } else {
+        tasks.forEach((task, idx) => {
+          replyText += `${idx + 1}. 「${task}」\n`;
+        });
+      }
+      replyText += '\n----------------\n💡 您可以隨時登入網頁控制台，將這些項目一鍵「轉為採買」、「轉為行程」或刪除喔！';
+
+      await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: replyText }]);
+      return true;
+    } catch (err: any) {
+      console.error('查詢未完成事項失敗:', err);
+      await sendReplyOrPush(lineUserId, replyToken, [{ type: 'text', text: `⚠️ 查詢失敗: ${err.message}` }]);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export { syncExternalCalendar } from './calendarSync';
