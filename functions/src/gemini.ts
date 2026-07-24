@@ -84,7 +84,7 @@ export async function parseInputWithGemini(
 ): Promise<GeminiParsedResponse> {
   const ai = new GoogleGenerativeAI(apiKey);
   const model = ai.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: geminiOutputSchema,
