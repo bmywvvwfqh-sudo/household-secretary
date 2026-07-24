@@ -1,20 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
+import { Sidebar } from './components/Sidebar';
 import { ToastContainer } from './components/ToastContainer';
 import { DashboardTab } from './components/tabs/DashboardTab';
 import { CalendarTab } from './components/tabs/CalendarTab';
 import { ShoppingTab } from './components/tabs/ShoppingTab';
 import { FinanceTab } from './components/tabs/FinanceTab';
+import { ChoresTab } from './components/tabs/ChoresTab';
 
-type TabId = 'dashboard' | 'calendar' | 'shopping' | 'finance';
+type TabId = 'dashboard' | 'calendar' | 'shopping' | 'finance' | 'chores';
 
 const MainApp: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth > 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!user) return <LoginScreen />;
 
@@ -24,15 +33,19 @@ const MainApp: React.FC = () => {
       case 'calendar':  return <CalendarTab />;
       case 'shopping':  return <ShoppingTab />;
       case 'finance':   return <FinanceTab />;
+      case 'chores':    return <ChoresTab />;
     }
   };
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-gradient)', color: 'var(--text-primary)' }}>
       <Header />
-      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 100px' }}>
-        {renderTab()}
-      </main>
+      <div style={{ display: 'flex', maxWidth: '1200px', margin: '0 auto', padding: '16px', gap: '24px' }}>
+        {isDesktop && <Sidebar currentTab={activeTab} setCurrentTab={(tab) => setActiveTab(tab as TabId)} />}
+        <main style={{ flex: 1, minWidth: 0, paddingBottom: '100px' }}>
+          {renderTab()}
+        </main>
+      </div>
       <BottomNav currentTab={activeTab} setCurrentTab={(tab) => setActiveTab(tab as TabId)} />
     </div>
   );

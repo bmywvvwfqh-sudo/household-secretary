@@ -42,14 +42,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
 
   return (
     <aside className="glass-panel desktop-sidebar" style={{
-      width: '280px',
+      flex: '0 0 260px',
+      width: '260px',
       padding: '24px',
       display: 'flex',
       flexDirection: 'column',
       gap: '24px',
       height: 'calc(100vh - 32px)',
       position: 'sticky',
-      top: '16px'
+      top: '16px',
+      overflow: 'auto'
     }}>
       {/* App Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px' }}>
@@ -184,11 +186,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-sidebar { display: none !important; }
-        }
-      `}</style>
     </aside>
   );
 };

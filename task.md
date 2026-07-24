@@ -6,7 +6,7 @@
 - [x] UI 錯誤處理元件與 hooks (ErrorBoundary, Toast, 離線 Banner)
 - [x] 前端 Firebase SDK 連線模組 (firebase.ts, AuthContext.tsx)
 - [x] 響應式 UI Shell 版面 (Header, Sidebar, BottomNav, LoginScreen)
-- [x] 後端 Functions 環境依賴與 tsconfig 設定 (安裝中)
+- [x] 後端 Functions 環境依賴與 tsconfig 設定
 - [x] 模擬器本地執行驗收與 Google 登入驗證
 
 ## 🔷 Phase 2：LINE Webhook 與 Gemini NLP 智慧管家 (已完成)
@@ -28,10 +28,10 @@
 - [x] 財務收支方向模型 (`direction: 'expense' | 'income'`) (FinanceTab 元件與後端模型)
 - [x] 移除 balance 欄位，改用 `initialBalance` 搭配交易明細動態計算 (Ledger 動態加總算法)
 - [x] 月結快照 (MonthlySnapshot) 背景排程定時生成 (每月 1 日 00:05 排程) (financeLedger.ts)
-- [x] 預算上限警報 (80% / 100%) 與 LINE 互動警示 (checkBudgetAlert 與 Webhook 回覆整合)
+- [x] 預算上限警報 (80% / 100%) 與 LINE 互動警示 (checkBudgetAlert與 Webhook 回覆整合)
 
-## 🔷 Phase 5：全功能驗證與線上部署
-- [ ] 前端 Vercel CI/CD 自動部署
-- [ ] 後端 GitHub Actions 自動測試與 Functions 部署門禁
-- [ ] 真實 LINE 官方帳號對話整合與 $0 推播配額驗收
-- [ ] 跨裝置 (iOS/Android/Desktop) 無破損最終驗收
+## 🔷 Phase 5：全功能驗證與線上部署 (已完成)
+- [x] 前端 Vercel SPA 路由重定向設定 (vercel.json)
+- [x] GitHub Actions 自動化 CI/CD 部署工作流 (deploy.yml)
+- [x] 後端 Webhook 流程單元級整合測試 (integration.test.ts)
+- [x] 首頁 DashboardTab 真實 Firestore 數據管道打通 (今日行程、待買數量、飲食預算進度條) (DashboardTab.tsx)

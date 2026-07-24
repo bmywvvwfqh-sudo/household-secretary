@@ -26,7 +26,7 @@ export const FinanceTab: React.FC = () => {
   const [showBudgetSetting, setShowBudgetSetting] = useState(false);
   
   const toast = useToast();
-  const familyId = "family-123";
+  const familyId = user?.uid || '';
   const categories = ['飲食', '水電房租', '交通', '貓咪開銷', '日常雜貨', '薪資收入', '其他'];
 
   // Mock 資料，供訪客通道使用
@@ -46,6 +46,7 @@ export const FinanceTab: React.FC = () => {
     }
 
     // 真實 Firestore 資料同步 (Ledger 明細)
+    if (!familyId) return;
     const q = query(collection(db, 'families', familyId, 'expenses'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ledgerData: LedgerItem[] = [];
@@ -70,7 +71,7 @@ export const FinanceTab: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [familyId]);
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();

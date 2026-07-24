@@ -3,9 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 家庭資料：限家庭成員讀寫
+    // familyId == request.auth.uid 允許 owner 在尚未建立家庭文件前仍可寫入
     match /families/{familyId}/{document=**} {
       allow read, write: if request.auth != null
-        && request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberUids;
+        && (familyId == request.auth.uid
+          || request.auth.uid in get(/databases/$(database)/documents/families/$(familyId)).data.memberUids);
     }
 
     // 待確認佇列：只有已登入使用者可讀（前端顯示用），寫入只靠 Admin SDK

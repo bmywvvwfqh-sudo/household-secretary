@@ -2,13 +2,12 @@ import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as ical from 'node-ical';
 
-const db = admin.firestore();
-
 /**
  * 訂閱外部 iCal 行事曆同步 Function (支援 iOS iCal / Google Public ICS)
  * 前端可直接傳送 { familyId, icalUrl } 進行呼叫
  */
 export const syncExternalCalendar = onCall(async (request) => {
+  const db = admin.firestore(); // 延遲初始化：確保 initializeApp() 已先執行
   // 檢查登入權限
   if (!request.auth) {
     throw new HttpsError('unauthenticated', '使用者未登入。');

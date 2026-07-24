@@ -4,7 +4,7 @@ import { CloudTasksClient } from '@google-cloud/tasks';
 import { validateLineSignature, downloadLineAudio, replyLineMessage, pushLineMessage } from './lineApi';
 import { parseInputWithGemini, GeminiParsedTask } from './gemini';
 import { LineWebhookRequestBody, LineWebhookEvent } from './types/line';
-import { createMonthlySnapshots, checkBudgetAlert } from './financeLedger';
+import { checkBudgetAlert } from './financeLedger';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -21,7 +21,10 @@ const QUEUE_NAME = 'line-events-queue';
  * 1. LINE Webhook 接收端點 (HTTPS Trigger)
  * 職責：1秒內驗簽、分發 Cloud Tasks，快速回覆 200 OK 避免 LINE 逾時重試
  */
-export const lineWebhook = onRequest({ consumeAppAssociation: false }, async (req, res) => {
+export const lineWebhook = onRequest({
+  secrets: ['LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN', 'GEMINI_API_KEY'],
+  invoker: 'public', // LINE 平台需要可公開呼叫
+}, async (req, res) => {
   const signature = req.headers['x-line-signature'] as string;
   const rawBody = req.rawBody; // Sec-1: 採用 rawBody Buffer 防止 JSON 排序誤差
 
@@ -92,7 +95,9 @@ async function enqueueCloudTask(event: LineWebhookEvent): Promise<void> {
 /**
  * 3. Cloud Tasks 執行端點 (HTTPS OIDC 受保護)
  */
-export const processLineEvents = onRequest(async (req, res) => {
+export const processLineEvents = onRequest({
+  secrets: ['LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN', 'GEMINI_API_KEY'],
+}, async (req, res) => {
   // 在生產環境中，此處應驗證 OIDC Token 以防偽造請求。
   // 本地 Emulator 開發時跳過驗證以利測試。
   if (process.env.FUNCTIONS_EMULATOR !== 'true') {

@@ -83,13 +83,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, setCurrentTab 
         );
       })}
       
-      <style>{`
-        @media (max-width: 768px) {
-          .mobile-bottom-nav {
-            display: flex !important;
-          }
-        }
-      `}</style>
     </nav>
   );
 };

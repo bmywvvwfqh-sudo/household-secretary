@@ -145,3 +145,13 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ── 響應式版面 ── */
+@media (max-width: 768px) {
+  .desktop-sidebar {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+}

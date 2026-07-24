@@ -1,8 +1,6 @@
 import * as admin from 'firebase-admin';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 
-const db = admin.firestore();
-
 /**
  * 計算指定帳戶在特定日期的動態可用餘額 (Ledger 演算法 + 月結快照優化)
  * @param familyId 家庭 ID
@@ -14,6 +12,7 @@ export async function computeAccountBalance(
   accountId: string,
   asOfDate: string
 ): Promise<number> {
+  const db = admin.firestore(); // 延遲初始化
   const [year, month] = asOfDate.split('-');
   const currentYearMonth = `${year}-${month}`;
 
@@ -80,6 +79,7 @@ export async function checkBudgetAlert(
   category: string,
   addedAmount: number
 ): Promise<string | null> {
+  const db = admin.firestore(); // 延遲初始化
   const today = new Date();
   const year = today.getFullYear();
   const month = (today.getMonth() + 1).toString().padStart(2, '0');
@@ -128,8 +128,8 @@ export async function checkBudgetAlert(
 export const createMonthlySnapshots = onSchedule({
   schedule: '5 0 1 * *',
   timeZone: 'Asia/Taipei',
-  consumeAppAssociation: false
-}, async (event) => {
+}, async (_event) => {
+  const db = admin.firestore(); // 延遲初始化
   console.log('開始執行月結快照定時排程...');
 
   const today = new Date();

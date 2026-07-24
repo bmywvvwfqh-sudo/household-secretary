@@ -1,49 +1,49 @@
-import { GoogleGenAI, Type, Schema } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini 結構化輸出 Schema 定義
-const taskSchema: Schema = {
-  type: Type.OBJECT,
+// Gemini 結構化輸出 Schema 定義 (使用字串字面值相容所有版本)
+const taskSchema = {
+  type: 'object',
   properties: {
     type: {
-      type: Type.STRING,
+      type: 'string',
       enum: ['calendar', 'shopping', 'finance', 'unconfirmed'],
       description: '項目類別：calendar (行程行事曆), shopping (店家採買清單), finance (財務收支記帳), unconfirmed (無法解析/待確認記事)'
     },
     // 行程欄位
-    title: { type: Type.STRING, description: '行程標題 (如：帶貓咪看醫生)' },
-    dateTime: { type: Type.STRING, description: '行程 ISO 8601 時間字串 (如：2026-07-26T15:00:00)' },
-    
+    title: { type: 'string', description: '行程標題 (如：帶貓咪看醫生)' },
+    dateTime: { type: 'string', description: '行程 ISO 8601 時間字串 (如：2026-07-26T15:00:00)' },
+
     // 採買欄位
-    item: { type: Type.STRING, description: '採買物品名稱 (如：全鮮乳)' },
-    store: { type: Type.STRING, description: '特定店家 (如：好市多, 全聯, 家樂福)' },
-    quantity: { type: Type.STRING, description: '採買數量/單位 (如：1加侖)' },
-    
+    item: { type: 'string', description: '採買物品名稱 (如：全鮮乳)' },
+    store: { type: 'string', description: '特定店家 (如：好市多, 全聯, 家樂福)' },
+    quantity: { type: 'string', description: '採買數量/單位 (如：1加侖)' },
+
     // 財務欄位
-    amount: { type: Type.INTEGER, description: '記帳金額 (如：850)' },
-    category: { type: Type.STRING, description: '記帳分類 (如：餐飲, 交通, 水電, 貓咪開銷)' },
-    direction: { 
-      type: Type.STRING, 
-      enum: ['expense', 'income'], 
-      description: '收支方向：expense (支出), income (收入)' 
+    amount: { type: 'integer', description: '記帳金額 (如：850)' },
+    category: { type: 'string', description: '記帳分類 (如：餐飲, 交通, 水電, 貓咪開銷)' },
+    direction: {
+      type: 'string',
+      enum: ['expense', 'income'],
+      description: '收支方向：expense (支出), income (收入)'
     },
-    remark: { type: Type.STRING, description: '備註說明' },
-    
+    remark: { type: 'string', description: '備註說明' },
+
     // 待確認欄位
-    rawText: { type: Type.STRING, description: '當無法明確歸類時，保留其原始文字內容' }
+    rawText: { type: 'string', description: '當無法明確歸類時，保留其原始文字內容' }
   },
   required: ['type']
 };
 
-const geminiOutputSchema: Schema = {
-  type: Type.OBJECT,
+const geminiOutputSchema = {
+  type: 'object',
   properties: {
     tasks: {
-      type: Type.ARRAY,
+      type: 'array',
       items: taskSchema,
       description: '從用戶輸入中批次拆解出的所有待處理項目'
     },
     rawReply: {
-      type: Type.STRING,
+      type: 'string',
       description: '回覆給 LINE 使用者的繁體中文親切溫馨短語，簡述已登記的內容。'
     }
   },
@@ -82,14 +82,14 @@ export async function parseInputWithGemini(
   apiKey: string,
   asOfDate: string
 ): Promise<GeminiParsedResponse> {
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenerativeAI(apiKey);
   const model = ai.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.0-flash-lite',
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: geminiOutputSchema,
       temperature: 0.1 // 低隨機性以獲取穩定的 JSON 結構
-    }
+    } as any // 相容舊版套件型別，執行時 API 仍支援
   });
 
   const systemInstruction = `
@@ -111,20 +111,28 @@ export async function parseInputWithGemini(
 最後，寫一句簡短、繁體中文且帶有親切溫馨氣氛的 rawReply 作為對使用者的答覆，告訴他們你已經登記了哪些項目（例如：「好的，太太！我已經幫您記下了週六帶貓看醫生，還有好市多的牛奶採買囉！🥰」）。
 `;
 
-  const contents: any[] = [];
-  
+  let contents: any[];
+
   if (mimeType === 'text/plain') {
-    contents.push(input as string);
+    // 文字輸入：必須包成 Content 物件
+    contents = [{
+      role: 'user',
+      parts: [{ text: input as string }]
+    }];
   } else {
-    // 語音多模態輸入
-    contents.push({
-      inlineData: {
-        data: (input as Buffer).toString('base64'),
-        mimeType: mimeType
-      }
-    });
-    // 對語音解析時，額外附加提示語要求其辨識音訊內容
-    contents.push("請仔細聽這段語音，並依照系統指令拆解內容。");
+    // 語音多模態輸入：音訊 + 提示語合為同一個 Content 物件的多個 parts
+    contents = [{
+      role: 'user',
+      parts: [
+        {
+          inlineData: {
+            data: (input as Buffer).toString('base64'),
+            mimeType: mimeType
+          }
+        },
+        { text: "請仔細聽這段語音，並依照系統指令拆解內容。" }
+      ]
+    }];
   }
 
   const result = await model.generateContent({

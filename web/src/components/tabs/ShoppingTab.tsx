@@ -68,7 +68,10 @@ export const ShoppingTab: React.FC = () => {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItemName.trim()) return;
+    if (!newItemName.trim()) {
+      toast.show('請輸入採買項目名稱', 'warning');
+      return;
+    }
 
     const newItem = {
       item: newItemName,
@@ -198,7 +201,7 @@ export const ShoppingTab: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
         {/* 新增採買物資表單 */}
-        <form onSubmit={handleAddItem} className="glass-panel" style={{
+        <form onSubmit={handleAddItem} translate="no" className="glass-panel" style={{
           padding: '20px',
           borderRadius: '12px',
           display: 'flex',
@@ -208,6 +211,7 @@ export const ShoppingTab: React.FC = () => {
         }}>
           <input
             type="text"
+            translate="no"
             placeholder="請輸入採買項目 (例如: 鮮乳)"
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}

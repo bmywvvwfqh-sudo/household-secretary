@@ -67,7 +67,10 @@ export const CalendarTab: React.FC = () => {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEventTitle.trim() || !newEventDate) return;
+    if (!newEventTitle.trim() || !newEventDate) {
+      toast.show('請填寫行程名稱與日期時間', 'warning');
+      return;
+    }
 
     const newEvent = {
       title: newEventTitle,
