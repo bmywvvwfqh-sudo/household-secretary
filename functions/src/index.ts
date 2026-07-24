@@ -1,14 +1,70 @@
-import { onRequest } from 'firebase-functions/v2/https';
+import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import { CloudTasksClient } from '@google-cloud/tasks';
 import { validateLineSignature, downloadLineAudio, replyLineMessage, pushLineMessage } from './lineApi';
-import { parseInputWithGemini, GeminiParsedTask } from './gemini';
+import { parseInputWithGemini, GeminiParsedTask, allocateChoresWithAI } from './gemini';
 import { LineWebhookRequestBody, LineWebhookEvent } from './types/line';
 import { checkBudgetAlert } from './financeLedger';
 
 admin.initializeApp();
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true });
+
+/**
+ * 🤖 AI 家務智慧分配 Callable Function
+ * 職責：調用 Gemini 分析未完成家務，將其合理幽默地分派給成員，並批次更新至資料庫。
+ */
+export const aiAllocateChores = onCall({ cors: true, invoker: 'public', secrets: ['GEMINI_API_KEY'] }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', '使用者未登入。');
+  }
+
+  const { familyId, chores } = request.data as { familyId: string; chores: { id: string; task: string }[] };
+
+  if (!familyId || !chores || chores.length === 0) {
+    throw new HttpsError('invalid-argument', '缺少 familyId 或待分配的家務項目。');
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new HttpsError('failed-precondition', '缺少 GEMINI_API_KEY 金鑰配置。');
+  }
+
+  try {
+    console.log(`開始呼叫 Gemini 為家庭 ${familyId} 分配 ${chores.length} 項家務...`);
+    const allocation = await allocateChoresWithAI(chores, apiKey);
+    
+    // 批次寫入 Firestore 更新負責人 (assignee) 與分配理由 (aiReason)
+    const batch = db.batch();
+    for (const assignment of allocation.assignments) {
+      const ref = db.collection('families').doc(familyId).collection('chores').doc(assignment.choreId);
+      batch.update(ref, {
+        assignee: assignment.assignee,
+        aiReason: assignment.reason,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    
+    // 同步儲存這次分配的整體評語 (overallComment)，寫入家庭設定檔以供前端顯示
+    const familyRef = db.collection('families').doc(familyId);
+    batch.set(familyRef, {
+      lastChoreAIComment: allocation.overallComment,
+      lastChoreAIAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await batch.commit();
+    console.log(`AI 家務分配成功，並已寫入 Firestore。評語: ${allocation.overallComment}`);
+
+    return {
+      success: true,
+      overallComment: allocation.overallComment,
+      assignments: allocation.assignments
+    };
+  } catch (err: any) {
+    console.error('AI 家務分配失敗:', err);
+    throw new HttpsError('internal', `AI 分配發生錯誤: ${err.message || '未知錯誤'}`);
+  }
+});
 
 // 取得環境變數，提供 Safe Fallback
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '';

@@ -147,3 +147,71 @@ export async function parseInputWithGemini(
 
   return JSON.parse(responseText) as GeminiParsedResponse;
 }
+
+/**
+ * 🤖 使用 Gemini 3.5 Flash 智慧分配家務
+ */
+export async function allocateChoresWithAI(
+  chores: { id: string; task: string }[],
+  apiKey: string
+): Promise<{
+  assignments: { choreId: string; assignee: string; reason: string }[];
+  overallComment: string;
+}> {
+  const ai = new GoogleGenerativeAI(apiKey);
+  const model = ai.getGenerativeModel({
+    model: 'gemini-3.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          assignments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                choreId: { type: 'string', description: '家務的 ID' },
+                assignee: { type: 'string', enum: ['媽媽', '爸爸', '小孩', '共同'], description: '指派的負責人' },
+                reason: { type: 'string', description: '分配該負責人的溫馨或幽默理由 (限繁體中文，一行字以內)' }
+              },
+              required: ['choreId', 'assignee', 'reason']
+            },
+            description: '所有家務的 AI 分配結果'
+          },
+          overallComment: {
+            type: 'string',
+            description: '管家對這次家務分配的總體點評與溫馨叮嚀 (限繁體中文，兩行字以內)'
+          }
+        },
+        required: ['assignments', 'overallComment']
+      },
+      temperature: 0.2
+    } as any
+  });
+
+  const systemInstruction = `
+你是一位幽默貼心的家庭祕書 AI 管家。
+使用者會提供你一項或多項尚未完成的家庭家務（包含 ID 與家務名稱）。
+你的任務是把這些家務合理、平衡且有趣地分配給家庭成員：'媽媽'、'爸爸' | '小孩' | '共同'。
+分派原則：
+- 考慮家務的性質，將體力活、技術活、或適合小朋友做的家務進行合理分配。
+- 分配必須平衡，不要全部塞給同一個人。
+- 寫出令人莞爾、溫馨幽默且具有人情味的分配理由 (繁體中文)，例如：'爸爸最近肩膀酸，這個擦地板就交給小孩當作運動吧！' 或 '倒垃圾需要追垃圾車，爸爸跑得最快！'。
+- 最後寫一段整體的溫馨叮嚀或口號 (overallComment)，鼓勵大家一起為家庭努力。
+`;
+
+  const inputPrompt = `請分配以下家務：\n` + JSON.stringify(chores, null, 2);
+
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: inputPrompt }] }],
+    systemInstruction
+  });
+
+  const responseText = result.response.text();
+  if (!responseText) {
+    throw new Error("Gemini 返回空分配結果。");
+  }
+
+  return JSON.parse(responseText);
+}

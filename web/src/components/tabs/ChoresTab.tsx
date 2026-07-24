@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
+import { db, functions } from '../../firebase';
 import { collection, query, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useToast } from '../../hooks/useToast';
-import { Plus, Trash2, CheckCircle2, Circle, User } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, User, Sparkles, Brain } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface ChoreItem {
@@ -11,6 +12,7 @@ interface ChoreItem {
   assignee: string;
   isDone: boolean;
   createdBy: string;
+  aiReason?: string;
 }
 
 const ASSIGNEES = ['媽媽', '爸爸', '小孩', '共同'];
@@ -21,15 +23,17 @@ export const ChoresTab: React.FC = () => {
   const [newTask, setNewTask] = useState('');
   const [newAssignee, setNewAssignee] = useState('媽媽');
   const [filterAssignee, setFilterAssignee] = useState<string>('全部');
+  const [aiComment, setAiComment] = useState<string>('');
+  const [isAllocating, setIsAllocating] = useState(false);
   const toast = useToast();
 
   const familyId = user?.uid || '';
 
   const mockChores: ChoreItem[] = [
-    { id: '1', task: '吸地板 🧹', assignee: '媽媽', isDone: false, createdBy: '媽媽' },
-    { id: '2', task: '倒垃圾 🗑️', assignee: '爸爸', isDone: true, createdBy: '媽媽' },
-    { id: '3', task: '洗碗 🍽️', assignee: '小孩', isDone: false, createdBy: '媽媽' },
-    { id: '4', task: '清貓砂盆 🐱', assignee: '共同', isDone: false, createdBy: '爸爸' },
+    { id: '1', task: '吸地板 🧹', assignee: '媽媽', isDone: false, createdBy: '媽媽', aiReason: '吸塵器拿著像打高爾夫，交給媽媽優雅揮灑！' },
+    { id: '2', task: '倒垃圾 🗑️', assignee: '爸爸', isDone: true, createdBy: '媽媽', aiReason: '追垃圾車需要百米衝刺，爸爸非你莫屬！' },
+    { id: '3', task: '洗碗 🍽️', assignee: '小孩', isDone: false, createdBy: '媽媽', aiReason: '飯後適度洗碗，是培養生活自理能力的第一步！' },
+    { id: '4', task: '清貓砂盆 🐱', assignee: '共同', isDone: false, createdBy: '爸爸', aiReason: '貓主子是大家的，鏟屎官人人有份！' },
     { id: '5', task: '曬衣服 👕', assignee: '媽媽', isDone: true, createdBy: '媽媽' },
   ];
 
@@ -39,19 +43,43 @@ export const ChoresTab: React.FC = () => {
       return;
     }
     if (!familyId) return;
-    const q = query(collection(db, 'families', familyId, 'chores'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+
+    // 1. 訂閱家務列表
+    const choresQuery = query(collection(db, 'families', familyId, 'chores'));
+    const unsubscribeChores = onSnapshot(choresQuery, (snapshot) => {
       const data: ChoreItem[] = [];
       snapshot.forEach((d) => {
         const item = d.data();
-        data.push({ id: d.id, task: item.task, assignee: item.assignee, isDone: item.isDone, createdBy: item.createdBy });
+        data.push({ 
+          id: d.id, 
+          task: item.task, 
+          assignee: item.assignee, 
+          isDone: item.isDone, 
+          createdBy: item.createdBy,
+          aiReason: item.aiReason
+        });
       });
       setChores(data);
     }, (err) => {
       console.error(err);
       toast.show('無法載入家務清單，請檢查權限。', 'error');
     });
-    return () => unsubscribe();
+
+    // 2. 訂閱家庭設定（獲取 AI 評語）
+    const familyDocRef = doc(db, 'families', familyId);
+    const unsubscribeFamily = onSnapshot(familyDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const familyData = docSnap.data();
+        setAiComment(familyData.lastChoreAIComment || '');
+      }
+    }, (err) => {
+      console.error('訂閱家庭資料失敗:', err);
+    });
+
+    return () => {
+      unsubscribeChores();
+      unsubscribeFamily();
+    };
   }, [familyId]);
 
   const handleAddChore = async (e: React.FormEvent) => {
@@ -71,6 +99,47 @@ export const ChoresTab: React.FC = () => {
       toast.show(`已指派「${newTask}」給 ${newAssignee}`, 'success');
     } catch (err: any) {
       toast.show(`新增失敗: ${err.message}`, 'error');
+    }
+  };
+
+  const handleAIAllocation = async () => {
+    const pendingChores = chores.filter(c => !c.isDone);
+    if (pendingChores.length === 0) {
+      toast.show('目前沒有未完成的家務需要 AI 分配唷！', 'warning');
+      return;
+    }
+
+    setIsAllocating(true);
+    toast.show('🤖 AI 管家已收到任務，正在研究最佳分工，請稍候...', 'info');
+
+    try {
+      if (!db) {
+        // Mock 模式的模擬回應
+        setTimeout(() => {
+          setChores(prev => prev.map(c => !c.isDone ? { ...c, assignee: '爸爸', aiReason: '模擬 AI 配派理由' } : c));
+          setAiComment('模擬的管家溫馨評語。');
+          setIsAllocating(false);
+          toast.show('✨ [模擬] AI 智慧分配完畢！', 'success');
+        }, 1500);
+        return;
+      }
+      
+      const allocateFn = httpsCallable<any, any>(functions, 'aiAllocateChores');
+      const response = await allocateFn({
+        familyId,
+        chores: pendingChores.map(c => ({ id: c.id, task: c.task }))
+      });
+      
+      if (response.data?.success) {
+        toast.show('✨ AI 智慧分配完畢！大家要開心地分工合作喔！', 'success');
+      } else {
+        toast.show('AI 分配失敗，請重試。', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.show(`AI 分配失敗: ${err.message || '未知錯誤'}`, 'error');
+    } finally {
+      setIsAllocating(false);
     }
   };
 
@@ -115,6 +184,29 @@ export const ChoresTab: React.FC = () => {
           「一句話，輪流分工不爭執。」<br />
           在 LINE 說「請爸爸去倒垃圾」，管家自動記錄在此！
         </p>
+
+        {/* AI 分配點評公告區 */}
+        {aiComment && (
+          <div style={{
+            padding: '14px 18px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.12) 0%, rgba(251, 191, 36, 0.04) 100%)',
+            borderLeft: '4px solid var(--accent-primary)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            marginTop: '16px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <Sparkles size={13} />
+              <span>🤖 本期管家溫馨分工點評</span>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.45', margin: 0, fontStyle: 'italic' }}>
+              「 {aiComment} 」
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 篩選 + 進度 */}
@@ -189,9 +281,50 @@ export const ChoresTab: React.FC = () => {
 
         {/* 家務清單 */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
-          <h4 style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '20px' }}>
-            📋 家務清單 ({filtered.length} 項)
-          </h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+            <h4 style={{ fontWeight: 'bold', fontSize: '16px', margin: 0 }}>
+              📋 家務清單 ({filtered.length} 項)
+            </h4>
+            
+            {/* AI 智慧分配按鈕 */}
+            <button
+              type="button"
+              onClick={handleAIAllocation}
+              disabled={isAllocating}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: 'none',
+                fontWeight: 'bold',
+                fontSize: '12px',
+                cursor: isAllocating ? 'not-allowed' : 'pointer',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, #a29bfe 100%)',
+                color: '#fff',
+                boxShadow: '0 4px 12px rgba(108, 92, 231, 0.3)',
+                transition: 'all 0.2s',
+                opacity: isAllocating ? 0.7 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!isAllocating) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 15px rgba(108, 92, 231, 0.5)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isAllocating) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(108, 92, 231, 0.3)';
+                }
+              }}
+            >
+              <Brain size={13} />
+              <span>{isAllocating ? '分配中...' : 'AI 智慧分配'}</span>
+            </button>
+          </div>
+
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
               <p>🎉 沒有待辦家務！</p>
@@ -218,6 +351,24 @@ export const ChoresTab: React.FC = () => {
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       負責人：{chore.assignee} · 登記人：{chore.createdBy}
                     </div>
+                    {/* AI 分配理由展示 */}
+                    {chore.aiReason && !chore.isDone && (
+                      <div style={{ 
+                        fontSize: '11px', 
+                        color: 'var(--accent-warning)', 
+                        marginTop: '4px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        background: 'rgba(251, 191, 36, 0.06)',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        width: 'fit-content'
+                      }}>
+                        <Sparkles size={11} style={{ flexShrink: 0 }} />
+                        <span style={{ lineHeight: '1.2' }}>管家點評：{chore.aiReason}</span>
+                      </div>
+                    )}
                   </div>
                   <span style={{
                     fontSize: '10px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '12px',
