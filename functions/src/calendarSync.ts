@@ -137,6 +137,28 @@ export const autoSyncCalendars = onSchedule({
       } catch (innerErr: any) {
         console.error(`家庭 ${familyId} 的外部日曆自動同步失敗:`, innerErr.message || innerErr);
       }
+
+      // 🔴 自動清理該家庭 24 小時前已過期的歷史行程 (不管來源是 line, web 還是 ical)
+      try {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const expiredSnapshot = await db
+          .collection('families')
+          .doc(familyId)
+          .collection('calendarEvents')
+          .where('dateTime', '<', oneDayAgo)
+          .get();
+
+        if (!expiredSnapshot.empty) {
+          const deleteBatch = db.batch();
+          expiredSnapshot.forEach(doc => {
+            deleteBatch.delete(doc.ref);
+          });
+          await deleteBatch.commit();
+          console.log(`已自動清理家庭 ${familyId} 的 ${expiredSnapshot.size} 項過期行程。`);
+        }
+      } catch (cleanErr: any) {
+        console.error(`家庭 ${familyId} 的過期行程自動清理失敗:`, cleanErr.message || cleanErr);
+      }
     }
     console.log('定時 iCal 日曆自動同步排程任務執行完畢。');
   } catch (error) {
