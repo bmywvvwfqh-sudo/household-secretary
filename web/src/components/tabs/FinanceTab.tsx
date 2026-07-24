@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { collection, query, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { useToast } from '../../hooks/useToast';
-import { Plus, Trash2, ArrowUpRight, ArrowDownRight, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, ArrowUpRight, ArrowDownRight, AlertTriangle, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface LedgerItem {
@@ -243,8 +243,12 @@ export const FinanceTab: React.FC = () => {
             }} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--text-secondary)' }}>
-            <AlertTriangle size={14} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: dietPercentage >= 100 ? 'var(--accent-danger)' : dietPercentage >= 80 ? 'var(--accent-warning)' : 'var(--accent-success)' }}>
+            {dietPercentage >= 80 ? (
+              <AlertTriangle size={14} />
+            ) : (
+              <CheckCircle2 size={14} color="var(--accent-success)" />
+            )}
             <span>
               {dietPercentage >= 100
                 ? '🚨 飲食預算已爆表！超额將持續 LINE 推送警報。'

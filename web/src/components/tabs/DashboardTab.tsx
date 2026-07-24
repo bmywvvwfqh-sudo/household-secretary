@@ -6,7 +6,9 @@ import {
   Mic, 
   AlertTriangle,
   X,
-  FileText
+  FileText,
+  Edit3,
+  Check
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { BindingPanel } from '../BindingPanel';
@@ -45,6 +47,8 @@ export const DashboardTab: React.FC = () => {
   const [dietExpenseTotal, setDietExpenseTotal] = useState<number>(0);
   const [budgetLimit] = useState<number>(20000); // 飲食預設上限 2 萬元
   const [unconfirmedTasks, setUnconfirmedTasks] = useState<UnconfirmedTask[]>([]);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
   // 🔴 修正：優先使用真實登入的 Google UID 作為家庭 ID，訪客模式下 fallback 為 MVP 固定 ID
@@ -195,7 +199,7 @@ export const DashboardTab: React.FC = () => {
   };
 
   // 待確認任務轉化邏輯
-  const handleConvertTask = async (task: UnconfirmedTask, targetType: 'shopping' | 'calendar') => {
+  const handleConvertTask = async (task: UnconfirmedTask, targetType: 'shopping' | 'calendar' | 'chore') => {
     try {
       if (db) {
         if (targetType === 'shopping') {
@@ -210,7 +214,7 @@ export const DashboardTab: React.FC = () => {
             source: 'web_convert'
           });
           toast.show('已成功轉為「採買清單」！', 'success');
-        } else {
+        } else if (targetType === 'calendar') {
           // 轉為行事曆行程：預設為今日
           await addDoc(collection(db, 'families', familyId, 'calendarEvents'), {
             title: task.rawText,
@@ -220,16 +224,54 @@ export const DashboardTab: React.FC = () => {
             source: 'web_convert'
           });
           toast.show('已成功轉為「今日行程」！', 'success');
+        } else if (targetType === 'chore') {
+          // 轉為家務分配：預設自動判定負責人
+          let assignee = '共同';
+          if (task.rawText.includes('爸爸')) {
+            assignee = '爸爸';
+          } else if (task.rawText.includes('媽媽')) {
+            assignee = '媽媽';
+          } else if (task.rawText.includes('小孩')) {
+            assignee = '小孩';
+          }
+          
+          await addDoc(collection(db, 'families', familyId, 'chores'), {
+            task: task.rawText,
+            assignee: assignee,
+            isDone: false,
+            createdBy: '網頁手動分配',
+            createdAt: new Date()
+          });
+          toast.show('已成功轉為「家務分配」！', 'success');
         }
         // 更新待確認佇列狀態為已處裡
         await updateDoc(doc(db, 'unconfirmedQueue', task.id), { status: 'processed' });
       } else {
         // Mock 刪除
         setUnconfirmedTasks((prev) => prev.filter((t) => t.id !== task.id));
-        toast.show(`(Mock) 已將該項目轉化為 ${targetType === 'shopping' ? '採買' : '行程'}！`, 'success');
+        toast.show(`(Mock) 已將該項目轉化為 ${targetType}！`, 'success');
       }
     } catch (err: any) {
       toast.show(`轉換失敗: ${err.message}`, 'error');
+    }
+  };
+
+  // 儲存編輯後更正的待確認文字內容
+  const handleSaveEditTask = async (id: string) => {
+    if (!editingText.trim()) {
+      toast.show('更正內容不能為空。', 'warning');
+      return;
+    }
+    try {
+      if (db) {
+        await updateDoc(doc(db, 'unconfirmedQueue', id), { rawText: editingText.trim() });
+      } else {
+        setUnconfirmedTasks((prev) => prev.map((t) => t.id === id ? { ...t, rawText: editingText.trim() } : t));
+      }
+      setEditingTaskId(null);
+      toast.show('已成功更正記事內容！', 'success');
+    } catch (err: any) {
+      toast.show(`更正失敗: ${err.message}`, 'error');
     }
   };
 
@@ -357,9 +399,92 @@ export const DashboardTab: React.FC = () => {
                 background: 'rgba(255, 255, 255, 0.4)',
                 border: '1px solid rgba(255, 255, 255, 0.5)'
               }}>
-                <span style={{ fontSize: '14.5px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  「{task.rawText}」
-                </span>
+                {/* 待確認文字 (現場可編輯/更正) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, marginRight: '16px' }}>
+                  {editingTaskId === task.id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+                      <input
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--accent-primary)',
+                          background: 'var(--input-bg)',
+                          color: 'var(--text-primary)',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSaveEditTask(task.id)}
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: 'var(--accent-success)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="儲存"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        onClick={() => setEditingTaskId(null)}
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: 'rgba(220, 38, 38, 0.1)',
+                          color: 'var(--accent-danger)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="取消"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14.5px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        「{task.rawText}」
+                      </span>
+                      <button
+                        onClick={() => {
+                          setEditingTaskId(task.id);
+                          setEditingText(task.rawText);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                        onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        title="編輯更正"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <button
@@ -409,6 +534,30 @@ export const DashboardTab: React.FC = () => {
                     }}
                   >
                     轉為行程
+                  </button>
+                  <button
+                    onClick={() => handleConvertTask(task, 'chore')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.05) 100%)',
+                      color: 'var(--accent-warning)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.background = 'rgba(251, 191, 36, 0.25)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.background = 'rgba(251, 191, 36, 0.15)';
+                    }}
+                  >
+                    轉為家務
                   </button>
                   <button
                     onClick={() => handleDismissTask(task.id)}
